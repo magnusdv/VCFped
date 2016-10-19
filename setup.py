@@ -7,7 +7,6 @@ except ImportError:
 
 config = {
     'name': 'vcfped',
-    'version': "1.0",
     'description': 'Identification of trios and other close relationships in multisample VCF files',
     'long_description': open('README.md').read(),
     'author': 'Magnus Dehli Vigeland',
@@ -18,6 +17,7 @@ config = {
         'vcfped'
     ],
     'classifiers': [
+        'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 2.7',
         'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)'
     ],
@@ -31,7 +31,7 @@ config = {
     ],
     'entry_points': {
         'console_scripts': [
-            'vcfped = vcfped.vcfped:vcfped'
+            'vcfped = vcfped.vcfped:main'
         ]
     },
     'package_data': {
