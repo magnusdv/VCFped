@@ -7,6 +7,7 @@ except ImportError:
 
 config = {
     'name': 'vcfped',
+    'version': "1.0.2",
     'description': 'Identification of trios and other close relationships in multisample VCF files',
     'long_description': open('README.md').read(),
     'author': 'Magnus Dehli Vigeland',
