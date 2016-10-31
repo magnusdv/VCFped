@@ -14,13 +14,13 @@ To run VCFped on a variant file *myvariants.vcf*, the basic command is
 In most circumstances VCFped can be run unsupervised with default parameters. For overview of the options, use the -h option:
     
     >vcfped -h
-    usage: vcfped.py [-h] [--quiet] [--version] [--prefix PREFIX] [--all]
-                     [--no-gender] [--no-pairwise] [--no-trio]
-                     [-var VARIABLES [VARIABLES ...]]
-                     [-p PERCENTILES [PERCENTILES ...]] [-e EXACTMAX]
-                     [-s SAMPLESIZE] [-sAABB SAMPLESIZEAABB] [-t1 THRESHTRIO1]
-                     [-t2 THRESHTRIO2] [-male THRESHMALE] [-female THRESHFEMALE]
-                     file
+    usage: vcfped-script.py [-h] [--quiet] [--version] [--no-gender]
+                            [--no-pairwise] [--no-trio] [--all] [-o PREFIX]
+                            [-v VARIABLES [VARIABLES ...]]
+                            [-p PERCENTILES [PERCENTILES ...]] [-e EXACTMAX]
+                            [-s SAMPLESIZE] [-d SAMPLESIZEAABB] [-t1 THRESHTRIO1]
+                            [-t2 THRESHTRIO2] [-f THRESHFEMALE] [-m THRESHMALE]
+                            file
 
     positional arguments:
       file                  path to VCF file
@@ -29,27 +29,26 @@ In most circumstances VCFped can be run unsupervised with default parameters. Fo
       -h, --help            show this help message and exit
       --quiet               do not print information on the screen
       --version             show program's version number and exit
-      --prefix PREFIX       prefix for output files
-      --all                 show results for all pairs/triples (not only the
-                            inferred)
       --no-gender           skip gender analysis
       --no-pairwise         skip pairwise analysis
       --no-trio             skip trio analysis
-      -var VARIABLES [VARIABLES ...]
+      --all                 show results for all pairs/triples (not only the
+                            inferred)
+      -o PREFIX             prefix for output files
+      -v VARIABLES [VARIABLES ...]
                             quality variables to be used for filtering
       -p PERCENTILES [PERCENTILES ...]
-                            filtering percentiles
+                            filtering percentile ranks
       -e EXACTMAX           if approx. line count exceeds this, apply random
                             sampling
       -s SAMPLESIZE         sample at least this many variant lines (if sampling)
-      -sAABB SAMPLESIZEAABB
-                            sample at least this many lines where both 0/0 and 1/1
+      -d SAMPLESIZEAABB     sample at least this many lines where both 0/0 and 1/1
                             occur as genotypes (if sampling)
       -t1 THRESHTRIO1       threshold (%) for trio test 1 (AA + BB = AB)
       -t2 THRESHTRIO2       threshold (%) for trio test 2 (BB + BB = BB)
-      -male THRESHMALE      upper limit (%) for male heterozygosity on X
-      -female THRESHFEMALE  lower limit (%) for female heterozygosity on X
-
+      -f THRESHFEMALE       lower limit (%) for female heterozygosity on X
+      -m THRESHMALE         upper limit (%) for male heterozygosity on X
+      
 ---
 
 #Introduction
