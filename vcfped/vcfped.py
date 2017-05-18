@@ -105,7 +105,7 @@ def inspectFile(filename, log, quiet=False):
         nSamples = len(samples)
         
         _writeout("Number of samples: %d" % nSamples, log, quiet)
-        _writeout("Samples names:", log, quiet)
+        _writeout("Sample names:", log, quiet)
         for i, s in enumerate(samples):
             _writeout('  %d: %s' %(i+1, s), log, quiet)
         
@@ -132,15 +132,12 @@ def inspectFile(filename, log, quiet=False):
     return dict(filename=filename, fileformat=fileformat, chromcol=chromcol, formatcol=formatcol, qualcol=qualcol, 
                 formatfields=formatfields, DPind=DPind, GQind=GQind, ADind=ADind, counttype=counttype, available_vars=available_vars,
                 linecount=linecount, samples=samples, nSamples=nSamples, startpos=startpos, endpos=endpos)
-            
-def getGTtuple(linesplit, firstSampleCol):
-    # Mapping VCF genotypes to {AA, AB, BB}
-    GT2AB = {'0/0':'AA', '0|0':'AA', '0/1':'AB', '0|1':'AB', '1|0':'AB', '1/1':'BB', '1|1':'BB'}
-    try:
-        return tuple(GT2AB[gt[:3]] for gt in linesplit[firstSampleCol:])
-    except KeyError:
-        return None
 
+_GT2AB_ = {'0/0':'AA', '0|0':'AA', '0/1':'AB', '0|1':'AB', '1|0':'AB', '1/1':'BB', '1|1':'BB'}                
+def getGTtuple(linesplit, firstSampleCol):
+    # Mapping VCF genotypes to {AA, AB, BB}, anything else to '-'
+    return tuple(_GT2AB_.get(gt[:3], '-') for gt in linesplit[firstSampleCol:])
+    
         
 class Filter(object):
     def __init__(self, formatinfo, PASS=None, DPmin=None, GQmin=None, QUALmin=None, ADmin=None):
@@ -229,7 +226,7 @@ def all_variants(file, info, log, quiet):
                 if 'AA' in GTtuple and 'BB' in GTtuple:
                     AABB += 1
     
-    if not quiet:
+    if log or not quiet:
         AUTant = sum(len(v) for v in AUTOSOM.values())
         Xant = sum(len(v) for v in XCHR.values())
         summary = 'Using all PASS variants:\n %d autosomal (including %d with AA+BB)\n %d X-linked.'%(AUTant, AABB, Xant)
@@ -306,6 +303,13 @@ def qualityDistrib(variantlines, formatinfo, variables=['QUAL', 'DP', 'GQ', 'AD'
                 ad = [_ALTratio(b[ADind]) for b in gtcols if b[0] in hets]
                 if ad:
                     distrib_data['AD'].append(min(ad))
+            # TODO change to indiv distrib:
+            # for b in gtcols:
+            #    if not b[0] in _GT2AB_: # skip e.g. 1/2 or ./.
+            #        continue
+            #    if DPind: distrib_data['DP'].append(int(b[DPind]))
+            #    if GQind: distrib_data['GQ'].append(int(b[GQind]))
+            #    if ADind and b[0] in hets: distrib_data['AD'].append(_ALTratio(b[ADind]))
         except Exception as e:
             continue
     
@@ -346,6 +350,7 @@ def checkTriple(AUTOSOMfilt, triple, percentile, threshold1, threshold2):
     distr = collections.Counter()
     g = operator.itemgetter(*triple)
     for k,v in AUTOSOMfilt.iteritems():
+        if '-' in g(k): continue
         distr[g(k)] += len(v)
     SURV = sum(distr.values()) 
     
@@ -383,6 +388,7 @@ def checkPair(AUTOSOMfilt, pair, percentile):
     distr = collections.Counter()
     g = operator.itemgetter(*pair)
     for k,v in AUTOSOMfilt.iteritems():
+        if '-' in g(k): continue
         distr[g(k)] += len(v)
     SURV = sum(distr.values()) 
     
