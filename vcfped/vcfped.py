@@ -400,7 +400,7 @@ def checkPair(AUTOSOMfilt, pair, percentile, MZ_thresh=95, PO_thresh=99):
     
     return dict(pair=pair, percentile=percentile, autos=autos_total, neitherAA=neitherAA, IBS2=IBS2_neitherAA, MZp=MZp, eitherBB=eitherBB, IBS12=IBS12, POp=POp, verdict=verdict)
 
-def inferGenders(XCHRfilt, formatinfo, threshMale, threshFemale, percentile):
+def inferGenders(XCHRfilt, formatinfo, percentile, FEMALE_thresh, MALE_thresh):
     nSamples = formatinfo['nSamples']
     Xdistribs = [collections.Counter() for _ in range(nSamples)]
     Xtot = 0
@@ -413,11 +413,11 @@ def inferGenders(XCHRfilt, formatinfo, threshMale, threshFemale, percentile):
     common = dict(percentile=percentile, Xtot=Xtot)
     def dist2gender(Xdist):
         denom = Xdist['AB']+Xdist['BB']
-        Xhetp = round(100.0 * Xdist['AB']/denom, 1) if denom > 0 else 0
+        Xhetp = 100.0 * Xdist['AB']/denom if denom > 0 else 0
         if denom >=25:
-            if Xhetp < threshMale:
+            if Xhetp <= MALE_thresh:
                 gender = 'Male' 
-            elif Xhetp < threshFemale:
+            elif Xhetp < FEMALE_thresh:
                 gender = '?'
             else:
                 gender = 'Female' 
@@ -535,7 +535,7 @@ def bestGenders(genderdata, prefix, quiet):
     return best
     
 def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP','GQ','AD'], percentiles=[10,30,50], 
-           T1_thresh=90, T2_thresh=95, MZ_thresh=95, PO_thresh=99, threshMale=5, threshFemale=25, 
+           T1_thresh=90, T2_thresh=95, MZ_thresh=95, PO_thresh=99, MALE_thresh=5, FEMALE_thresh=25, 
            nogender=False, nopairwise=False, notrio=False, exactmax=100000, samplesize=10000, samplesizeAABB=1000):
     """Detect close relationships (e.g. trios and parent-child pairs) in a multisample VCF file.
     
@@ -556,15 +556,15 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
             those where neither is AA, must be at least MZ_thresh. (Default = 95)
         PO_thresh (int): Threshold for parent-offspring. To pass, the percentage of variants with IBS>0 among 
             those where either is BB, must be at least PO_thresh. (Default = 99)
-        threshMale (int): If heterozygosity (in percent) on X (minus 
+        MALE_thresh (int): If heterozygosity (in percent) on X (minus 
             pseudoautosomal regions) is lower than this, the sample is set to 'male'. (Default = 5%)
-        threshFemale (int): If heterozygosity (in percent) on X (minus 
+        FEMALE_thresh (int): If heterozygosity (in percent) on X (minus 
             pseudoautosomal regions) is higher than this, the sample is set to 'female'. (Default = 25%)
         quiet (bool): If True, print only conclusion. (Default = False)
         nogender (bool): If True, skip gender estimation. (Default = False)
         nopairwise (bool): If True, skip pairwise analysis. (Default = False)
         notrio (bool): If True, skip trio analysis. (Default = False)
-        percentiles (list): List of (integral) percentile ranks to be used in filtering. (Default = [10,20,30,40,50])
+        percentiles (list): List of (integral) percentile ranks to be used in filtering. (Default = [10,30,50])
     """
     
     log = None if prefix is None or prefix in ("", "STDOUT") else open('%s.log'%prefix, 'w')
@@ -580,7 +580,7 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
     _writeout(form.format('Analysis:', 'Genders [%s], pairwise [%s], trios [%s]' %(callGenders, callPairs, callTrios)), log, quiet)
     _writeout(form.format('Include in output:', 'All pairs/triples' if reportall else 'Only inferred pairs/triples'), log, quiet)
     _writeout(form.format('Trio test thresholds', 'Test 1 (AA+BB=AB) [%d%%], test 2 (BB+BB=BB) [%d%%]'%(T1_thresh,T2_thresh)), log, quiet)
-    _writeout(form.format('Gender thresholds (X heterozygosity)', 'Male [<%d%%], female [>%d%%]' %(threshMale, threshFemale)), log, quiet)
+    _writeout(form.format('Gender thresholds (X heterozygosity)', 'Male [<%d%%], female [>%d%%]' %(MALE_thresh, FEMALE_thresh)), log, quiet)
     _writeout(form.format('Sample if approx. count exceeds', exactmax), log, quiet)
     _writeout(form.format('If sampling: Minimum # variants', samplesize), log, quiet)
     _writeout(form.format('If sampling: Minimum with AA and BB', samplesizeAABB), log, quiet)
@@ -625,7 +625,7 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
 
         #### GENDERS ###
         if callGenders:
-            genders = inferGenders(x_filt, info, threshMale, threshFemale, percentile=p)
+            genders = inferGenders(x_filt, info, percentile=p, FEMALE_thresh=FEMALE_thresh, MALE_thresh=MALE_thresh)
             GENDERRES.extend(genders)
           
         #### PAIRWISE ###
@@ -687,8 +687,8 @@ def main():
     parser.add_argument("-t2", dest="T2_thresh", type=int, help="threshold (%%) for T2 score (BB + BB = BB)", default=95)
     parser.add_argument("-mz", dest="MZ_thresh", type=int, help="threshold (%%) for MZ score (IBS=2 | neither is AA)", default=95)
     parser.add_argument("-po", dest="PO_thresh", type=int, help="threshold (%%) for PO score (IBS>0 | either is BB)", default=99)
-    parser.add_argument("-f", dest="threshFemale", type=int, help="lower limit (%%) for female heterozygosity on X", default=25)
-    parser.add_argument("-m", dest="threshMale", type=int, help="upper limit (%%) for male heterozygosity on X", default=5)
+    parser.add_argument("-female", dest="FEMALE_thresh", type=int, help="lower limit (%%) for female heterozygosity on X", default=25)
+    parser.add_argument("-male", dest="MALE_thresh", type=int, help="upper limit (%%) for male heterozygosity on X", default=5)
     
     args = parser.parse_args(sys.argv[1:])  
     for pp in args.percentiles:
@@ -698,8 +698,9 @@ def main():
     if not 0<= args.T2_thresh <=100: parser.error(thresh_error % ('t2','T2_thresh', args.T2_thresh))
     if not 0<= args.MZ_thresh <=100: parser.error(thresh_error % ('mz','MZ_thresh', args.MZ_thresh))
     if not 0<= args.PO_thresh <=100: parser.error(thresh_error % ('po','PO_thresh', args.PO_thresh))
-    if not 0<= args.threshMale <=100: parser.error(thresh_error % ('male','threshMale', args.threshMale))
-    if not 0<= args.threshFemale <=100: parser.error(thresh_error % ('male','threshFemale', args.threshFemale))
+    if not 0<= args.FEMALE_thresh <=100: parser.error(thresh_error % ('female','FEMALE_thresh', args.FEMALE_thresh))
+    if not 0<= args.MALE_thresh <=100: parser.error(thresh_error % ('male','MALE_thresh', args.MALE_thresh))
+    if args.MALE_thresh > args.FEMALE_thresh: parser.error("argument -male/--MALE_thresh: invalid threshold (must be below female threshold which is %d): %d" %(args.FEMALE_thresh, args.MALE_thresh))
     
     if args.prefix is None: args.prefix = os.path.splitext(os.path.basename(args.file))[0]
     vcfped(**vars(args))
