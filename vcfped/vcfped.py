@@ -370,33 +370,35 @@ def checkTriple(AUTOSOMfilt, triple, percentile, T1_thresh, T2_thresh):
         testresults.append(result_dict)
     return testresults
 
+def checkPair(AUTOSOMfilt, pair, percentile, MZ_thresh=95, PO_thresh=99):
     testresults = []
     distr = collections.Counter()
     g = operator.itemgetter(*pair)
     for k,v in AUTOSOMfilt.iteritems():
         if '-' in g(k): continue
         distr[g(k)] += len(v)
-    SURV = sum(distr.values()) 
+    autos_total = sum(distr.values()) 
     
     # MZ score = freq(IBS=2 | none are AA)
-    noneAA = distr[('AB','AB')] + distr[('AB', 'BB')] + distr[('BB','AB')] + distr[('BB', 'BB')]
-    IBS2_noneAA = distr[('AB','AB')] + distr[('BB', 'BB')]
-    MZp = 100.0 * IBS2_noneAA/noneAA
+    neitherAA = distr[('AB','AB')] + distr[('AB', 'BB')] + distr[('BB','AB')] + distr[('BB', 'BB')]
+    IBS2_neitherAA = distr[('AB','AB')] + distr[('BB', 'BB')]
+    MZp = 100.0 * IBS2_neitherAA/neitherAA if neitherAA>0 else 0
         
-    # test for parent-offspring: Percentage of AA+BB out of all with BB. Should be (close to) 0.
-    AA_BB = distr[('AA','BB')] + distr[('BB', 'AA')]
-    tot_BB = AA_BB + distr[('AB','BB')] + distr[('BB','AB')] + distr[('BB','BB')]
-    plenty_BB = tot_BB >= 100
-    AA_BBp = round(100.0 * AA_BB/tot_BB, 2) if tot_BB>0 else 0
+    # Parent-offspring test: PO score = freq(IBS>0 | either is BB)
+    eitherBB = distr[('AA','BB')] + distr[('BB', 'AA')] + distr[('AB','BB')] + distr[('BB','AB')] + distr[('BB','BB')]
+    IBS12 = eitherBB - distr[('AA','BB')] - distr[('BB', 'AA')]
+    POp = 100.0 * IBS12/eitherBB if eitherBB>0 else 0
     
-    if SURV >= 100 and MZp > MZ_thresh:
+    if neitherAA >= 100 and MZp >= MZ_thresh:
         verdict = 'MZ twins'
-    elif plenty_BB:
-        verdict = 'Parent-child' if AA_BBp < 1 else 'Other/unrelated'
+    elif eitherBB >= 100 and POp >= PO_thresh:
+        verdict = 'Parent-child' 
+    elif eitherBB >= 100 and POp < PO_thresh:
+        verdict = 'Other/unrelated'
     else:
         verdict ='na'
     
-    return dict(pair=pair, percentile=percentile, autos=SURV, IBS2=IBS2_noneAA, MZp=MZp, tot_BB=tot_BB, AA_BB=AA_BB, AA_BBp=AA_BBp, verdict=verdict)
+    return dict(pair=pair, percentile=percentile, autos=autos_total, neitherAA=neitherAA, IBS2=IBS2_neitherAA, MZp=MZp, eitherBB=eitherBB, IBS12=IBS12, POp=POp, verdict=verdict)
 
 def inferGenders(XCHRfilt, formatinfo, threshMale, threshFemale, percentile):
     nSamples = formatinfo['nSamples']
@@ -444,12 +446,12 @@ def pretty_trio_table(TRIORES):
     return '\n'.join(table)  
     
 def pretty_pairwise_table(PAIRRES):
-    table = ['\t'.join(['Pair', 'Perc', 'Autos', 'IBS2', 'MZscore', 'anyBB', 'IBS0', 'POtest', 'Verdict'])]
+    table = ['\t'.join(['Pair', 'Perc', 'Autos', 'NeitherAA', 'IBS2', 'MZscore', 'EitherBB', 'IBS>0', 'POscore', 'Verdict'])]
     for d in PAIRRES:
         pair_txt = '%d,%d' % tuple(p+1 for p in d['pair'])
         MZscore = '%.1f' % d['MZp']
-        POtest = '%.1f' % d['AA_BBp']
-        printdat = [pair_txt, d['percentile'], d['autos'], d['IBS2'], MZscore, d['tot_BB'], d['AA_BB'], POtest, d['verdict']]
+        POscore = '%.1f' % d['POp']
+        printdat = [pair_txt, d['percentile'], d['autos'], d['neitherAA'], d['IBS2'], MZscore, d['eitherBB'], d['IBS12'], POscore, d['verdict']]
         table.append('\t'.join(map(str,printdat)))
     return '\n'.join(table) 
     
@@ -493,7 +495,7 @@ def bestPairs(pairdata, prefix, reportall, quiet):
         if verdict == 'MZ twins':
             nonNA.sort(key=lambda x: (-round(x['MZp'], 1), x['percentile']))
         elif verdict == 'Parent-child' or reportall:
-            nonNA.sort(key=lambda x: (round(x['AA_BBp'], 1), x['percentile']))
+            nonNA.sort(key=lambda x: (round(x['POp'], 1), x['percentile']))
         else:
             continue
         best.append(nonNA[0])
