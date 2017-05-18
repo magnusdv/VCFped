@@ -535,8 +535,8 @@ def bestGenders(genderdata, prefix, quiet):
     return best
     
 def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP','GQ','AD'], percentiles=[10,30,50], 
-           T1_thresh=90, T2_thresh=95, threshMale=5, threshFemale=25, nogender=False, nopairwise=False, 
-           notrio=False, exactmax=100000, samplesize=10000, samplesizeAABB=1000):
+           T1_thresh=90, T2_thresh=95, MZ_thresh=95, PO_thresh=99, threshMale=5, threshFemale=25, 
+           nogender=False, nopairwise=False, notrio=False, exactmax=100000, samplesize=10000, samplesizeAABB=1000):
     """Detect close relationships (e.g. trios and parent-child pairs) in a multisample VCF file.
     
     The input file should contain jointly called variants from two or more individuals.
@@ -548,10 +548,14 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
                 * Columns (after preamble) are tab-separated.
                 * The final columns of the file must contain genotype data, in the form of a (VCF-like) format column 
                   (e.g. GT:AD:DP:GQ:PL) followed by one column per sample.
-        T1_thresh (int): Threshold for test 1. To pass test1, the percentage of "AA + BB" variants 
-            resulting in AB must be at least thresh1. (Default = 90%)
-        T2_thresh (int): Threshold for test 1. To pass test1, the percentage of "BB + BB" variants 
-            resulting in BB must be at least thresh2. (Default = 95%)
+        T1_thresh (int): Threshold for trio test 1. To pass, the percentage of "AA + BB" variants 
+            resulting in AB must be at least T1_thresh. (Default = 90)
+        T2_thresh (int): Threshold for trio test 2. To pass, the percentage of "BB + BB" variants 
+            resulting in BB must be at least T2_thresh. (Default = 95)
+        MZ_thresh (int): Threshold for MZ score. To pass, the percentage of variants with IBS=2 among 
+            those where neither is AA, must be at least MZ_thresh. (Default = 95)
+        PO_thresh (int): Threshold for parent-offspring. To pass, the percentage of variants with IBS>0 among 
+            those where either is BB, must be at least PO_thresh. (Default = 99)
         threshMale (int): If heterozygosity (in percent) on X (minus 
             pseudoautosomal regions) is lower than this, the sample is set to 'male'. (Default = 5%)
         threshFemale (int): If heterozygosity (in percent) on X (minus 
@@ -626,7 +630,7 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
         #### PAIRWISE ###
         if callPairs:
             for pair in pairs:
-                testres = checkPair(autosom_filt, pair, percentile=p)
+                testres = checkPair(autosom_filt, pair, percentile=p, MZ_thresh=MZ_thresh, PO_thresh=PO_thresh)
                 PAIRRES.append(testres)
                     
         #### TRIOS ###
@@ -678,8 +682,10 @@ def main():
     parser.add_argument("-e", dest='exactmax', type=int, help="if approx. line count exceeds this, apply random sampling", default=100000)
     parser.add_argument("-s", dest='samplesize', type=int, help="sample at least this many variant lines (if sampling)", default=10000)
     parser.add_argument("-d", dest='samplesizeAABB', type=int, help="sample at least this many lines where both 0/0 and 1/1 occur as genotypes (if sampling)", default=1000)
-    parser.add_argument("-t1", dest="T1_thresh", type=int, help="threshold (%%) for trio test 1 (AA + BB = AB)", default=90)
-    parser.add_argument("-t2", dest="T2_thresh", type=int, help="threshold (%%) for trio test 2 (BB + BB = BB)", default=95)
+    parser.add_argument("-t1", dest="T1_thresh", type=int, help="threshold (%%) for T1 score (AA + BB = AB)", default=90)
+    parser.add_argument("-t2", dest="T2_thresh", type=int, help="threshold (%%) for T2 score (BB + BB = BB)", default=95)
+    parser.add_argument("-mz", dest="MZ_thresh", type=int, help="threshold (%%) for MZ score (IBS=2 | neither is AA)", default=95)
+    parser.add_argument("-po", dest="PO_thresh", type=int, help="threshold (%%) for PO score (IBS>0 | either is BB)", default=99)
     parser.add_argument("-f", dest="threshFemale", type=int, help="lower limit (%%) for female heterozygosity on X", default=25)
     parser.add_argument("-m", dest="threshMale", type=int, help="upper limit (%%) for male heterozygosity on X", default=5)
     
@@ -689,6 +695,8 @@ def main():
     thresh_error = "argument -%s/--%s: invalid threshold (must be in [0, 100]): %d"
     if not 0<= args.T1_thresh <=100: parser.error(thresh_error % ('t1','T1_thresh', args.T1_thresh))
     if not 0<= args.T2_thresh <=100: parser.error(thresh_error % ('t2','T2_thresh', args.T2_thresh))
+    if not 0<= args.MZ_thresh <=100: parser.error(thresh_error % ('mz','MZ_thresh', args.MZ_thresh))
+    if not 0<= args.PO_thresh <=100: parser.error(thresh_error % ('po','PO_thresh', args.PO_thresh))
     if not 0<= args.threshMale <=100: parser.error(thresh_error % ('male','threshMale', args.threshMale))
     if not 0<= args.threshFemale <=100: parser.error(thresh_error % ('male','threshFemale', args.threshFemale))
     
