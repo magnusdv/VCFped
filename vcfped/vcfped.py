@@ -370,7 +370,6 @@ def checkTriple(AUTOSOMfilt, triple, percentile, T1_thresh, T2_thresh):
         testresults.append(result_dict)
     return testresults
 
-def checkPair(AUTOSOMfilt, pair, percentile):
     testresults = []
     distr = collections.Counter()
     g = operator.itemgetter(*pair)
@@ -379,9 +378,10 @@ def checkPair(AUTOSOMfilt, pair, percentile):
         distr[g(k)] += len(v)
     SURV = sum(distr.values()) 
     
-    # test for MZ twins: Percentage of all variants with identical genotypes
-    MZ = sum(distr[(gt,gt)] for gt in ('AA','AB','BB'))
-    MZp = round(100.0 * MZ/SURV, 2)
+    # MZ score = freq(IBS=2 | none are AA)
+    noneAA = distr[('AB','AB')] + distr[('AB', 'BB')] + distr[('BB','AB')] + distr[('BB', 'BB')]
+    IBS2_noneAA = distr[('AB','AB')] + distr[('BB', 'BB')]
+    MZp = 100.0 * IBS2_noneAA/noneAA
         
     # test for parent-offspring: Percentage of AA+BB out of all with BB. Should be (close to) 0.
     AA_BB = distr[('AA','BB')] + distr[('BB', 'AA')]
@@ -389,14 +389,14 @@ def checkPair(AUTOSOMfilt, pair, percentile):
     plenty_BB = tot_BB >= 100
     AA_BBp = round(100.0 * AA_BB/tot_BB, 2) if tot_BB>0 else 0
     
-    if SURV >= 100 and MZp > 95:
+    if SURV >= 100 and MZp > MZ_thresh:
         verdict = 'MZ twins'
     elif plenty_BB:
         verdict = 'Parent-child' if AA_BBp < 1 else 'Other/unrelated'
     else:
         verdict ='na'
     
-    return dict(pair=pair, percentile=percentile, autos=SURV, MZ=MZ, MZp=MZp, tot_BB=tot_BB, AA_BB=AA_BB, AA_BBp=AA_BBp, verdict=verdict)
+    return dict(pair=pair, percentile=percentile, autos=SURV, IBS2=IBS2_noneAA, MZp=MZp, tot_BB=tot_BB, AA_BB=AA_BB, AA_BBp=AA_BBp, verdict=verdict)
 
 def inferGenders(XCHRfilt, formatinfo, threshMale, threshFemale, percentile):
     nSamples = formatinfo['nSamples']
@@ -444,12 +444,12 @@ def pretty_trio_table(TRIORES):
     return '\n'.join(table)  
     
 def pretty_pairwise_table(PAIRRES):
-    table = ['\t'.join(['Pair', 'Perc', 'Autos', 'IBS2', 'MZtest', 'anyBB', 'IBS0', 'POtest', 'Verdict'])]
+    table = ['\t'.join(['Pair', 'Perc', 'Autos', 'IBS2', 'MZscore', 'anyBB', 'IBS0', 'POtest', 'Verdict'])]
     for d in PAIRRES:
         pair_txt = '%d,%d' % tuple(p+1 for p in d['pair'])
-        MZtest = '%.1f' % d['MZp']
+        MZscore = '%.1f' % d['MZp']
         POtest = '%.1f' % d['AA_BBp']
-        printdat = [pair_txt, d['percentile'], d['autos'], d['MZ'], MZtest, d['tot_BB'], d['AA_BB'], POtest, d['verdict']]
+        printdat = [pair_txt, d['percentile'], d['autos'], d['IBS2'], MZscore, d['tot_BB'], d['AA_BB'], POtest, d['verdict']]
         table.append('\t'.join(map(str,printdat)))
     return '\n'.join(table) 
     
