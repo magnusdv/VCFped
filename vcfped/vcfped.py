@@ -330,7 +330,7 @@ def qualityPercentile(distrib_data, p, log, quiet):
     
     return res
     
-def checkTriple(AUTOSOMfilt, triple, percentile, threshold1, threshold2):
+def checkTriple(AUTOSOMfilt, triple, percentile, T1_thresh, T2_thresh):
     # AUTOSOMfilt: dictionary. Keys are tuples (GT1, GT2, ...) whose value is a list of all variants with that gt combo.
     # percentile is just for book-keeping in output
     
@@ -359,8 +359,8 @@ def checkTriple(AUTOSOMfilt, triple, percentile, threshold1, threshold2):
         BB_BB_BBp = round(100.0 * BB_BB_BB/tot_BB_BB, 2) if tot_BB_BB > 0 else 0
                 
         if tot_AA_BB>=100: # TODO: should this be user argument?
-            if AA_BB_ABp >= threshold1:
-                verdict = 'Regular trio' if BB_BB_BBp >= threshold2 else 'Inverted/generational trio'
+            if AA_BB_ABp >= T1_thresh:
+                verdict = 'Regular trio' if BB_BB_BBp >= T2_thresh else 'Inverted/generational trio'
             else:
                 verdict = 'Not trio'
         else:
@@ -532,8 +532,8 @@ def bestGenders(genderdata, prefix, quiet):
     
     return best
     
-def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP','GQ','AD'], percentiles=[10,20,30,40,50], 
-           threshTrio1=90, threshTrio2=95, threshMale=5, threshFemale=25, nogender=False, nopairwise=False, 
+def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP','GQ','AD'], percentiles=[10,30,50], 
+           T1_thresh=90, T2_thresh=95, threshMale=5, threshFemale=25, nogender=False, nopairwise=False, 
            notrio=False, exactmax=100000, samplesize=10000, samplesizeAABB=1000):
     """Detect close relationships (e.g. trios and parent-child pairs) in a multisample VCF file.
     
@@ -546,9 +546,9 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
                 * Columns (after preamble) are tab-separated.
                 * The final columns of the file must contain genotype data, in the form of a (VCF-like) format column 
                   (e.g. GT:AD:DP:GQ:PL) followed by one column per sample.
-        threshTrio1 (int): Threshold for test 1. To pass test1, the percentage of "AA + BB" variants 
+        T1_thresh (int): Threshold for test 1. To pass test1, the percentage of "AA + BB" variants 
             resulting in AB must be at least thresh1. (Default = 90%)
-        threshTrio2 (int): Threshold for test 1. To pass test1, the percentage of "BB + BB" variants 
+        T2_thresh (int): Threshold for test 1. To pass test1, the percentage of "BB + BB" variants 
             resulting in BB must be at least thresh2. (Default = 95%)
         threshMale (int): If heterozygosity (in percent) on X (minus 
             pseudoautosomal regions) is lower than this, the sample is set to 'male'. (Default = 5%)
@@ -572,7 +572,7 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
     _writeout(form.format('Output file prefix', prefix), log, quiet)
     _writeout(form.format('Analysis:', 'Genders [%s], pairwise [%s], trios [%s]' %tuple(calls_yesno)), log, quiet)
     _writeout(form.format('Include in output:', 'All pairs/triples' if reportall else 'Only inferred pairs/triples'), log, quiet)
-    _writeout(form.format('Trio test thresholds', 'Test 1 (AA+BB=AB) [%d%%], test 2 (BB+BB=BB) [%d%%]'%(threshTrio1,threshTrio2)), log, quiet)
+    _writeout(form.format('Trio test thresholds', 'Test 1 (AA+BB=AB) [%d%%], test 2 (BB+BB=BB) [%d%%]'%(T1_thresh,T2_thresh)), log, quiet)
     _writeout(form.format('Gender thresholds (X heterozygosity)', 'Male [<%d%%], female [>%d%%]' %(threshMale, threshFemale)), log, quiet)
     _writeout(form.format('Sample if approx. count exceeds', exactmax), log, quiet)
     _writeout(form.format('If sampling: Minimum # variants', samplesize), log, quiet)
@@ -630,7 +630,7 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
         #### TRIOS ###
         if callTrios:
             for triple in triples:
-                testres = checkTriple(autosom_filt, triple, percentile=p, threshold1=threshTrio1, threshold2=threshTrio2)
+                testres = checkTriple(autosom_filt, triple, percentile=p, T1_thresh=T1_thresh, T2_thresh=T2_thresh)
                 TRIORES.extend(testres)
     
     _writeout('\nAll analysis finished.\nTime used: %.2f seconds' % (time.time()-st), log, quiet)
@@ -676,8 +676,8 @@ def main():
     parser.add_argument("-e", dest='exactmax', type=int, help="if approx. line count exceeds this, apply random sampling", default=100000)
     parser.add_argument("-s", dest='samplesize', type=int, help="sample at least this many variant lines (if sampling)", default=10000)
     parser.add_argument("-d", dest='samplesizeAABB', type=int, help="sample at least this many lines where both 0/0 and 1/1 occur as genotypes (if sampling)", default=1000)
-    parser.add_argument("-t1", dest="threshTrio1", type=int, help="threshold (%%) for trio test 1 (AA + BB = AB)", default=90)
-    parser.add_argument("-t2", dest="threshTrio2", type=int, help="threshold (%%) for trio test 2 (BB + BB = BB)", default=95)
+    parser.add_argument("-t1", dest="T1_thresh", type=int, help="threshold (%%) for trio test 1 (AA + BB = AB)", default=90)
+    parser.add_argument("-t2", dest="T2_thresh", type=int, help="threshold (%%) for trio test 2 (BB + BB = BB)", default=95)
     parser.add_argument("-f", dest="threshFemale", type=int, help="lower limit (%%) for female heterozygosity on X", default=25)
     parser.add_argument("-m", dest="threshMale", type=int, help="upper limit (%%) for male heterozygosity on X", default=5)
     
@@ -685,8 +685,8 @@ def main():
     for pp in args.percentiles:
         if not 0 <= pp < 100: parser.error("argument -p: invalid percentile: %d" %pp)
     thresh_error = "argument -%s/--%s: invalid threshold (must be in [0, 100]): %d"
-    if not 0<= args.threshTrio1 <=100: parser.error(thresh_error % ('t1','threshTrio1', args.threshTrio1))
-    if not 0<= args.threshTrio2 <=100: parser.error(thresh_error % ('t2','threshTrio2', args.threshTrio2))
+    if not 0<= args.T1_thresh <=100: parser.error(thresh_error % ('t1','T1_thresh', args.T1_thresh))
+    if not 0<= args.T2_thresh <=100: parser.error(thresh_error % ('t2','T2_thresh', args.T2_thresh))
     if not 0<= args.threshMale <=100: parser.error(thresh_error % ('male','threshMale', args.threshMale))
     if not 0<= args.threshFemale <=100: parser.error(thresh_error % ('male','threshFemale', args.threshFemale))
     
