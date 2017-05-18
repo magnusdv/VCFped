@@ -330,19 +330,6 @@ def qualityPercentile(distrib_data, p, log, quiet):
     
     return res
     
-# Utility function for the trio tests
-def _conditionalDist(GTtriple, GT1, GT2, order, decimals=2):
-    """Find the observed genotype freqs of third sample, conditional on given genotypes in the first two."""
-    _perm = operator.itemgetter(*order)
-    if GT1 == GT2:
-        cond_dist = [GTtriple[_perm([GT1, GT2, gt])] for gt in ('AA', 'AB', 'BB')]
-    else:
-        cond_dist = [GTtriple[_perm([GT1, GT2, gt])] + GTtriple[_perm([GT2, GT1, gt])] for gt in ('AA', 'AB', 'BB')]
-    
-    cond_tot = sum(cond_dist) # total variants in this class 
-    cond_dist_perc = [round(100.0 * x / cond_tot, decimals) for x in cond_dist] if cond_tot else [0,0,0] # distribution in percent
-    return cond_tot, cond_dist_perc 
-
 def checkTriple(AUTOSOMfilt, triple, percentile, threshold1, threshold2):
     # AUTOSOMfilt: dictionary. Keys are tuples (GT1, GT2, ...) whose value is a list of all variants with that gt combo.
     # percentile is just for book-keeping in output
