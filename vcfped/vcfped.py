@@ -568,15 +568,16 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
     """
     
     log = None if prefix is None or prefix in ("", "STDOUT") else open('%s.log'%prefix, 'w')
-    callTrios, callPairs, callGenders = not notrio, not nopairwise, not nogender 
-    calls_yesno = ['YES' if a else 'NO' for a in (callTrios, callPairs, callGenders)]
+    callTrios = 'YES' if not notrio else 'NO'
+    callPairs = 'YES' if not nopairwise else 'NO'
+    callGenders = 'YES' if not nogender else 'NO'
     
     form = '{:>40} : {}'
     _writeout('VCFped %s\n'%__version__, log, quiet)
     _writeout('Options in effect:', log, quiet)
     _writeout(form.format('Input file', file), log, quiet)
     _writeout(form.format('Output file prefix', prefix), log, quiet)
-    _writeout(form.format('Analysis:', 'Genders [%s], pairwise [%s], trios [%s]' %tuple(calls_yesno)), log, quiet)
+    _writeout(form.format('Analysis:', 'Genders [%s], pairwise [%s], trios [%s]' %(callGenders, callPairs, callTrios)), log, quiet)
     _writeout(form.format('Include in output:', 'All pairs/triples' if reportall else 'Only inferred pairs/triples'), log, quiet)
     _writeout(form.format('Trio test thresholds', 'Test 1 (AA+BB=AB) [%d%%], test 2 (BB+BB=BB) [%d%%]'%(T1_thresh,T2_thresh)), log, quiet)
     _writeout(form.format('Gender thresholds (X heterozygosity)', 'Male [<%d%%], female [>%d%%]' %(threshMale, threshFemale)), log, quiet)
@@ -678,10 +679,10 @@ def main():
     parser.add_argument("--all", help="show results for all pairs/triples (not only the inferred)", dest="reportall", action='store_true')
     parser.add_argument("-o", help="prefix for output files", dest="prefix")
     parser.add_argument("-v", dest="variables", nargs='+', help="quality variables to be used for filtering", default=['QUAL', 'DP', 'GQ', 'AD'])
-    parser.add_argument("-p", dest="percentiles", nargs='+', type=int, help="filtering percentile ranks", default=[10,20,30,40,50])
-    parser.add_argument("-e", dest='exactmax', type=int, help="if approx. line count exceeds this, apply random sampling", default=100000)
+    parser.add_argument("-p", dest="percentiles", nargs='+', type=int, help="filtering percentile ranks", default=[10,30,50])
+    parser.add_argument("-e", dest='exactmax', type=int, help="if approx. line count exceeds this, apply random sampling", default=150000)
     parser.add_argument("-s", dest='samplesize', type=int, help="sample at least this many variant lines (if sampling)", default=10000)
-    parser.add_argument("-d", dest='samplesizeAABB', type=int, help="sample at least this many lines where both 0/0 and 1/1 occur as genotypes (if sampling)", default=1000)
+    parser.add_argument("-d", dest='samplesizeAABB', type=int, help="sample at least this many lines where both 0/0 and 1/1 occur as genotypes (if sampling)", default=500)
     parser.add_argument("-t1", dest="T1_thresh", type=int, help="threshold (%%) for T1 score (AA + BB = AB)", default=90)
     parser.add_argument("-t2", dest="T2_thresh", type=int, help="threshold (%%) for T2 score (BB + BB = BB)", default=95)
     parser.add_argument("-mz", dest="MZ_thresh", type=int, help="threshold (%%) for MZ score (IBS=2 | neither is AA)", default=95)
