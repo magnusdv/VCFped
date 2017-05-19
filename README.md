@@ -70,28 +70,28 @@ For a few close relationships the genotype of one individual can be determined (
 ### Trio relationships
 To identify trios a combination of two tests are used. The first (*AA + BB = AB*) recognizes the three basic trio types: regular (parent-offspring), inverted (two siblings and one parent) and  generational (child-parent-grandparent). The second (*BB + BB = BB*) discriminates regular trios from the other two types. Both test scores are computed for every cyclic ordering of each triple of samples in the input variant file.
 
-##### *T1 score = freq(g<sub>3</sub> = AB | g<sub>1</sub> = AA, g<sub>2</sub> = BB or vice versa)*
+#### *T1 score = freq(g<sub>3</sub> = AB | g<sub>1</sub> = AA, g<sub>2</sub> = BB or vice versa)*
 What's computed: The conditional frequency of genotype AB in one sample given AA and BB in the two others. The AB genotype is forced for the child of a regular trio, the parent in an inverted trio, and the middle individual in a generational trio.  
-Default threshold: 90 %
+Default threshold: 90 % (modify with option -t1)
 
-##### *T2 score = freq(g<sub>3</sub> = BB | g<sub>1</sub> = g<sub>2</sub> = BB)*  
+#### *T2 score = freq(g<sub>3</sub> = BB | g<sub>1</sub> = g<sub>2</sub> = BB)*  
 What's computed: The conditional frequency of genotype BB in one sample given BB in both the others. This is forced for the child of a regular trio, but also if individual 3 is a monozygotic twin (or a sample duplicate!) of one of the others.  
-Default threshold: 95 %   (modify with option -t2)
+Default threshold: 95 % (modify with option -t2)
 
 ### Pairwise relationships
 For pairwise relatedness VCFped tests for monozygotic twins (MZ) and parent-offspring (PO), which both obey patterns of forced allele sharing. MZ twins always have both alleles identical by state (IBS), while parent-offspring are always IBS > 0. The conditions in the following expressions ensure that the scores are unaffected by the data censoring of VCF files.
 
-##### *MZ score = freq(IBS=2 | neither is AA)*
+#### *MZ score = freq(IBS=2 | neither is AA)*
 What's computed: The frequency of equal genotypes among all variants where both have a least one B.  
-Default threshold: 95 %
+Default threshold: 95 % (modify with option -mz)
 
-##### *PO score = freq(IBS>0 | either is BB)*
+#### *PO score = freq(IBS>0 | either is BB)*
 What's computed: The frequency of at least one shared allele, given that at least one is homozygous BB.    
-Default threshold: 99 %
+Default threshold: 99 % (modify with option -po)
 
 ### Gender prediction
 VCFped predicts the gender of each sample by using variants on X (except pseudoautosomal regions):
 
-##### *XHET=freq(AB | AB or BB)*
+#### *XHET=freq(AB | AB or BB)*
 What's computed: The heterozygosity on X among all non-AA variants.  
-Default interpretation: *Male* if XHET < 5 %, *female* if XHET > 25 %
+Default interpretation: *male* if XHET < 5 %, *female* if XHET > 25 % (modify with options -male and -female)
