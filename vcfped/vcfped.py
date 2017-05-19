@@ -493,7 +493,7 @@ def bestPairs(pairdata, reportall):
         if verdict == 'MZ twins':
             nonNA.sort(key=lambda x: (-round(x['MZp'], 1), x['percentile']))
         elif verdict == 'Parent-child' or reportall:
-            nonNA.sort(key=lambda x: (round(x['POp'], 1), x['percentile']))
+            nonNA.sort(key=lambda x: (-round(x['POp'], 1), x['percentile']))
         else:
             continue
         best.append(nonNA[0])
