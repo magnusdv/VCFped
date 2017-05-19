@@ -1,5 +1,5 @@
 # VCFped
-VCFped is a command line utility which quickly and confidently identifies close relationships (e.g. parent-child, trios and quartets) in multisample VCF files.
+VCFped is a command line utility which quickly and confidently identifies trios and close pairwise relationships in multisample VCF files.
 The algorithm does not rely on allele frequencies or other annotations, and is highly robust to inbreeding and poor quality variants.
 
 ## Installation and basic usage:

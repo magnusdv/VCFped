@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Module for identifying colse relationships (e.g. trios) in a multisample VCF file.
+Module for identifying trios and close pairwise relationships in a multisample VCF file.
 
 Author: Magnus Dehli Vigeland
 Email: magnusdv at medisin.uio.no

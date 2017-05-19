@@ -7,7 +7,7 @@ except ImportError:
 
 config = {
     'name': 'vcfped',
-    'version': "1.1.0",
+    'version': "1.2.0",
     'description': 'Identification of trios and other close relationships in multisample VCF files',
     'long_description': open('README.md').read(),
     'author': 'Magnus Dehli Vigeland',
@@ -23,11 +23,12 @@ config = {
         'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)'
     ],
     'keywords': [
+        'trio',
         'relatedness',
-        'variant files'
-        'trio'
-        'exome',
+        'variant files',
         'vcf',
+        'high-throughput sequencing',
+        'exome sequencing',
         'family-based sequencing'
     ],
     'entry_points': {
