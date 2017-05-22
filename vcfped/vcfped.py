@@ -618,85 +618,84 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
         if not nogender:
             genders = inferGenders(x_filt, info, percentile=p, FEMALE_thresh=FEMALE_thresh, MALE_thresh=MALE_thresh)
             GENDERRES.extend(genders)
-          
+            
         #### PAIRWISE ###
         if not nopairwise:
             for pair in pairs:
                 testres = checkPair(autosom_filt, pair, percentile=p, MZ_thresh=MZ_thresh, PO_thresh=PO_thresh)
                 PAIRRES.append(testres)
-                    
+            
         #### TRIOS ###
         if not notrio:
             for triple in triples:
                 testres = checkTriple(autosom_filt, triple, percentile=p, T1_thresh=T1_thresh, T2_thresh=T2_thresh)
                 TRIORES.extend(testres)
     
+    GENDERRES.sort(key=lambda x: (x['sample'], x['percentile']))
+    PAIRRES.sort(key=lambda x: (x['pair'], x['percentile']))
+    TRIORES.sort(key=lambda x: (x['triple'], x['pivot'], x['percentile']))
+    
+    # Most confident calls
+    bestG = bestGenders(GENDERRES)
+    bestP = bestPairs(PAIRRES, reportall=reportall)
+    bestT = bestTrios(TRIORES, reportall=reportall)
+        
     _writeout('\nAll analysis finished.\nTime used: %.2f seconds' % (time.time()-st), log, quiet)
      
     TEMP = "\n===={heading}====\n{table}\n\nMost confident {analysis} calls written to {outfile}"     
     
     if not nogender:
-        GENDERRES.sort(key=lambda x: (x['sample'], x['percentile']))
+        
         outfile = "%s.gender" % prefix
         
         # write all results to log (pretty-printed)
         complete = tabulate(gender_table(GENDERRES), tablefmt="plain") 
         _writeout(TEMP.format(heading="GENDERS", table=complete, analysis="gender", outfile=outfile), log, quiet=True)
         
-        # most confident calls
-        best = bestGenders(GENDERRES)
-        
         # write most confident calls to screen, if not quiet (pretty-printed)
-        best_pretty = tabulate(best, tablefmt="plain") 
+        best_pretty = tabulate(bestG, tablefmt="plain") 
         _writeout(TEMP.format(heading="GENDERS", table=best_pretty, analysis="gender", outfile=outfile), log=None, quiet=quiet)
         
         # write most confident calls to separate file (tab separated!)
-        best_tsv = '\n'.join('\t'.join(map(str, line)) for line in best)
+        best_tsv = '\n'.join('\t'.join(map(str, line)) for line in bestG)
         with open(outfile, 'w') as out:
             out.write(best_tsv)   
         
     if not nopairwise:    
-        PAIRRES.sort(key=lambda x: (x['pair'], x['percentile']))
+        
         outfile = "%s.pair" % prefix
         # write all results to log (pretty-printed)
         complete = tabulate(pairwise_table(PAIRRES), tablefmt="plain") if PAIRRES else "Not enough individuals in the file"
         _writeout(TEMP.format(heading="PAIRWISE RELATIONS", table=complete, analysis="pairwise", outfile=outfile), log, quiet=True)
         
-        # most confident calls
-        best = bestPairs(PAIRRES, reportall=reportall)
-        
         # write most confident calls to screen, if not quiet (pretty-printed)
-        best_pretty = tabulate(best, tablefmt="plain") if PAIRRES else "Not enough individuals in the file"
+        best_pretty = tabulate(bestP, tablefmt="plain") if PAIRRES else "Not enough individuals in the file"
         _writeout(TEMP.format(heading="PAIRWISE RELATIONS", table=best_pretty, analysis="pairwise", outfile=outfile), log=None, quiet=quiet)
         
         # write most confident calls to separate file (tab separated!)
-        best_tsv = '\n'.join('\t'.join(map(str, line)) for line in best)
+        best_tsv = '\n'.join('\t'.join(map(str, line)) for line in bestP)
         with open(outfile, 'w') as out:
             out.write(best_tsv)
                    
     if not notrio:
-        TRIORES.sort(key=lambda x: (x['triple'], x['pivot'], x['percentile']))
         outfile = "%s.trio" % prefix
         
         # write all results to log (pretty-printed)
         complete = tabulate(trio_table(TRIORES), tablefmt="plain") if TRIORES else "Not enough individuals in the file"
         _writeout(TEMP.format(heading="TRIO RELATIONS", table=complete, analysis="trio", outfile=outfile), log, quiet=True)
         
-        # most confident calls
-        best = bestTrios(TRIORES, reportall=reportall)
-        
         # write most confident calls to screen, if not quiet (pretty-printed)
-        best_pretty = tabulate(best, tablefmt="plain") if TRIORES else "Not enough individuals in the file"
+        best_pretty = tabulate(bestT, tablefmt="plain") if TRIORES else "Not enough individuals in the file"
         _writeout(TEMP.format(heading="TRIO RELATIONS", table=best_pretty, analysis="trio", outfile=outfile), log=None, quiet=quiet)
         
         # write most confident calls to separate file (tab separated!)
-        best_tsv = '\n'.join('\t'.join(map(str, line)) for line in best)
+        best_tsv = '\n'.join('\t'.join(map(str, line)) for line in bestT)
         with open(outfile, 'w') as out:
             out.write(best_tsv)        
     
     if log:
         log.close()
-    
+        
 def main():    
     parser = argparse.ArgumentParser()
     parser.add_argument("file", help="path to VCF file")
