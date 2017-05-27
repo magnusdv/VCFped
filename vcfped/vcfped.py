@@ -695,16 +695,20 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
             out.write(best_tsv)        
     
     if pedfile:
-        comp = "OK"
+        pedcomp = "OK"
         try:
             checkped.checkped(pedfile, bestG, bestP, bestT, info)
         except RuntimeError as e:
-            comp = "FAIL!\n%s" %e
-            _writeout(e, log, quiet=quiet)
-        _writeout("\n====COMPARISON WITH PEDIGREE FILE====\n%s\n" % comp, log, quiet=quiet)
+            pedcomp = "FAIL!\n%s" %e
+        _writeout("\n====COMPARISON WITH PEDIGREE FILE====\n%s\n" % pedcomp, log, quiet=quiet)
         
     if log:
         log.close()  
+    
+    if pedfile:
+        return pedcomp=="OK"
+    else:
+        return None
         
 def main():    
     parser = argparse.ArgumentParser()
@@ -743,7 +747,8 @@ def main():
     if not 0<= args.PO_thresh <=100: parser.error(thresh_error % ('po','PO_thresh', args.PO_thresh))
     if not 0<= args.FEMALE_thresh <=100: parser.error(thresh_error % ('female','FEMALE_thresh', args.FEMALE_thresh))
     if not 0<= args.MALE_thresh <=100: parser.error(thresh_error % ('male','MALE_thresh', args.MALE_thresh))
-    if args.MALE_thresh > args.FEMALE_thresh: parser.error("argument -male/--MALE_thresh: invalid threshold (must be below female threshold which is %d): %d" %(args.FEMALE_thresh, args.MALE_thresh))
+    if args.MALE_thresh > args.FEMALE_thresh: 
+        parser.error("argument -male/--MALE_thresh: invalid threshold (must be below female threshold which is %d): %d" %(args.FEMALE_thresh, args.MALE_thresh))
     
     if args.prefix is None: args.prefix = os.path.splitext(os.path.basename(args.file))[0]
     vcfped(**vars(args))
