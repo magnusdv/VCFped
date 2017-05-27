@@ -14,6 +14,9 @@ config = {
     'author_email': 'magnusdv@medisin.uio.no',
     'license': 'GPL-2',
     'url': 'https://github.com/magnusdv/vcfped',
+    'install_requires': [
+        'tabulate'
+    ],
     'packages': [
         'vcfped'
     ],
