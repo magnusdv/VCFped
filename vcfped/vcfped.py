@@ -32,7 +32,8 @@ import sys
 import os
 import argparse
 from tabulate import tabulate
-    
+
+import checkped
 
 # Hard coding coordinates of pseudo-autosomal regions on X (hg19)
 _PAR1_ = (60000, 2699521)
@@ -523,10 +524,9 @@ def bestGenders(genderdata):
         best.append(use[0])
     
     return gender_table(best)
-    
-    
+        
 def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP','GQ','AD'], percentiles=[10,30,50], 
-           T1_thresh=90, T2_thresh=95, MZ_thresh=95, PO_thresh=99, MALE_thresh=5, FEMALE_thresh=25, 
+           T1_thresh=90, T2_thresh=95, MZ_thresh=95, PO_thresh=99, MALE_thresh=5, FEMALE_thresh=25, pedfile=None,
            nogender=False, nopairwise=False, notrio=False, exactmax=150000, samplesize=10000, samplesizeAABB=500):
     """Detect close relationships (e.g. trios and parent-child pairs) in a multisample VCF file.
     
@@ -552,6 +552,7 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
         FEMALE_thresh (int): If heterozygosity (in percent) on X (minus 
             pseudoautosomal regions) is higher than this, the sample is set to 'female'. (Default = 25%)
         quiet (bool): If True, print only conclusion. (Default = False)
+        pedfile (str): path to trio pedigree file to be checked. (Default = None)
         nogender (bool): If True, skip gender estimation. (Default = False)
         nopairwise (bool): If True, skip pairwise analysis. (Default = False)
         notrio (bool): If True, skip trio analysis. (Default = False)
@@ -559,16 +560,16 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
     """
     
     log = None if prefix is None or prefix in ("", "STDOUT") else open('%s.log'%prefix, 'w')
-    callTrios = 'YES' if not notrio else 'NO'
-    callPairs = 'YES' if not nopairwise else 'NO'
-    callGenders = 'YES' if not nogender else 'NO'
+    callGenders, callPairs, callTrios = not nogender, not nopairwise, not notrio
+    ynG, ynP, ynT = ('YES' if b else 'NO' for b in (callGenders, callPairs, callTrios))
     
     form = '{:>40} : {}'
     _writeout('VCFped %s\n'%__version__, log, quiet)
     _writeout('Options in effect:', log, quiet)
     _writeout(form.format('Input file', file), log, quiet)
     _writeout(form.format('Output file prefix', prefix), log, quiet)
-    _writeout(form.format('Analysis:', 'Genders [%s], pairwise [%s], trios [%s]' %(callGenders, callPairs, callTrios)), log, quiet)
+    _writeout(form.format('Analysis:', 'Genders [%s], pairwise [%s], trios [%s]' %(ynG, ynP, ynT)), log, quiet)
+    _writeout(form.format('Compare with pedfile', pedfile), log, quiet)
     _writeout(form.format('Include in output:', 'All pairs/triples' if reportall else 'Only inferred pairs/triples'), log, quiet)
     _writeout(form.format('Trio test thresholds', 'Test 1 (AA+BB=AB) [%d%%], test 2 (BB+BB=BB) [%d%%]'%(T1_thresh,T2_thresh)), log, quiet)
     _writeout(form.format('Gender thresholds (X heterozygosity)', 'Male [<%d%%], female [>%d%%]' %(MALE_thresh, FEMALE_thresh)), log, quiet)
@@ -639,9 +640,9 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
     bestG = bestGenders(GENDERRES)
     bestP = bestPairs(PAIRRES, reportall=reportall)
     bestT = bestTrios(TRIORES, reportall=reportall)
-        
+    
     _writeout('\nAll analysis finished.\nTime used: %.2f seconds' % (time.time()-st), log, quiet)
-     
+    
     TEMP = "\n===={heading}====\n{table}\n\nMost confident {analysis} calls written to {outfile}"     
     
     if not nogender:
@@ -693,8 +694,17 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
         with open(outfile, 'w') as out:
             out.write(best_tsv)        
     
+    if pedfile:
+        comp = "OK"
+        try:
+            checkped.checkped(pedfile, bestG, bestP, bestT, info)
+        except RuntimeError as e:
+            comp = "FAIL!\n%s" %e
+            _writeout(e, log, quiet=quiet)
+        _writeout("\n====COMPARISON WITH PEDIGREE FILE====\n%s\n" % comp, log, quiet=quiet)
+        
     if log:
-        log.close()
+        log.close()  
         
 def main():    
     parser = argparse.ArgumentParser()
@@ -706,6 +716,7 @@ def main():
     parser.add_argument("--no-trio", help="skip trio analysis", dest='notrio', action='store_true')
     parser.add_argument("--all", help="show results for all pairs/triples (not only the inferred)", dest="reportall", action='store_true')
     parser.add_argument("-o", help="prefix for output files", dest="prefix")
+    parser.add_argument("-ped", help="path to trio pedfile", dest="pedfile")
     parser.add_argument("-v", dest="variables", nargs='+', help="quality variables to be used for filtering", default=['QUAL', 'DP', 'GQ', 'AD'])
     parser.add_argument("-p", dest="percentiles", nargs='+', type=int, help="filtering percentile ranks", default=[10,30,50])
     parser.add_argument("-e", dest='exactmax', type=int, help="if approx. line count exceeds this, apply random sampling", default=150000)
@@ -719,6 +730,10 @@ def main():
     parser.add_argument("-male", dest="MALE_thresh", type=int, help="upper limit (%%) for male heterozygosity on X", default=5)
     
     args = parser.parse_args(sys.argv[1:])  
+    if args.pedfile and args.notrio:
+        parser.error("argument --no-trio: Trio analysis cannot be switched off when a pedfile is indicated.")
+    if args.pedfile and args.nogender:
+        parser.error("argument --no-gender: Gender analysis cannot be switched off when a pedfile is indicated.")
     for pp in args.percentiles:
         if not 0 <= pp < 100: parser.error("argument -p: invalid percentile: %d" %pp)
     thresh_error = "argument -%s/--%s: invalid threshold (must be in [0, 100]): %d"

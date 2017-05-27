@@ -48,8 +48,8 @@ In most circumstances VCFped can be run unsupervised with default parameters. Fo
                             occur as genotypes (if sampling)
       -t1 T1_THRESH         threshold (%) for T1 score (AA + BB = AB)
       -t2 T2_THRESH         threshold (%) for T2 score (BB + BB = BB)
-      -mz MZ_THRESH         threshold (%) for MZ score (IBS=2 | neither is AA)
-      -po PO_THRESH         threshold (%) for PO score (IBS>0 | either is BB)
+      -mz MZ_THRESH         threshold (%) for MZ score (IBS = 2 | neither is AA)
+      -po PO_THRESH         threshold (%) for PO score (IBS > 0 | either is BB)
       -female FEMALE_THRESH
                             lower limit (%) for female heterozygosity on X
       -male MALE_THRESH     upper limit (%) for male heterozygosity on X
@@ -81,17 +81,17 @@ Default threshold: 95 % (modify with option -t2)
 ### Pairwise relationships
 For pairwise relatedness VCFped tests for monozygotic twins (MZ) and parent-offspring (PO), which both obey patterns of forced allele sharing. MZ twins always have both alleles identical by state (IBS), while parent-offspring are always IBS > 0. The conditions in the following expressions ensure that the scores are unaffected by the data censoring of VCF files.
 
-#### *MZ score = freq(IBS=2 | neither is AA)*
+#### *MZ score = freq(IBS = 2 | neither is AA)*
 What's computed: The frequency of equal genotypes among all variants where both have a least one B.  
 Default threshold: 95 % (modify with option -mz)
 
-#### *PO score = freq(IBS>0 | either is BB)*
+#### *PO score = freq(IBS > 0 | either is BB)*
 What's computed: The frequency of at least one shared allele, given that at least one is homozygous BB.    
 Default threshold: 99 % (modify with option -po)
 
 ### Gender prediction
 VCFped predicts the gender of each sample by using variants on X (except pseudoautosomal regions):
 
-#### *XHET=freq(AB | AB or BB)*
+#### *XHET = freq(AB | AB or BB)*
 What's computed: The heterozygosity on X among all non-AA variants.  
 Default interpretation: *male* if XHET < 5 %, *female* if XHET > 25 % (modify with options -male and -female)
