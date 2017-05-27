@@ -571,8 +571,9 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
     _writeout(form.format('Analysis:', 'Genders [%s], pairwise [%s], trios [%s]' %(ynG, ynP, ynT)), log, quiet)
     _writeout(form.format('Compare with pedfile', pedfile), log, quiet)
     _writeout(form.format('Include in output:', 'All pairs/triples' if reportall else 'Only inferred pairs/triples'), log, quiet)
-    _writeout(form.format('Trio test thresholds', 'Test 1 (AA+BB=AB) [%d%%], test 2 (BB+BB=BB) [%d%%]'%(T1_thresh,T2_thresh)), log, quiet)
-    _writeout(form.format('Gender thresholds (X heterozygosity)', 'Male [<%d%%], female [>%d%%]' %(MALE_thresh, FEMALE_thresh)), log, quiet)
+    _writeout(form.format('Trio thresholds', 'T1 (AA+BB=AB) [%d%%], T2 (BB+BB=BB) [%d%%]'%(T1_thresh,T2_thresh)), log, quiet)
+    _writeout(form.format('Pairwise thresholds', 'MZ (IBS=2) [%d%%], PO (IBS>0) [%d%%]'%(MZ_thresh,PO_thresh)), log, quiet)
+    _writeout(form.format('Gender thresholds', 'Male (Xhet) [<%d%%], female (Xhet) [>%d%%]' %(MALE_thresh, FEMALE_thresh)), log, quiet)
     _writeout(form.format('Sample if approx. count exceeds', exactmax), log, quiet)
     _writeout(form.format('If sampling: Minimum # variants', samplesize), log, quiet)
     _writeout(form.format('If sampling: Minimum with AA and BB', samplesizeAABB), log, quiet)
@@ -587,6 +588,10 @@ def vcfped(file, quiet=True, reportall=False, prefix=None, variables=['QUAL','DP
     linecount = info['linecount']
     chromcol = info['chromcol']
     firstSampleCol = info['formatcol'] + 1
+    
+    badvars = [v for v in variables if v not in ['QUAL','DP','GQ','AD']]
+    if badvars:
+        raise RuntimeError("Unknown quality variables: %s." % ', '.join(badvars))
     
     if linecount > exactmax:
         AUTOSOM, XCHR = sample_variants(file, maxsize=samplesize*2, AABBsize=samplesizeAABB, Xsize=100, info=info, log=log, quiet=quiet)
