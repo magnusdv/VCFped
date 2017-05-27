@@ -21,7 +21,6 @@ config = {
         'vcfped'
     ],
     'classifiers': [
-        'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 2.7',
         'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)'
     ],
